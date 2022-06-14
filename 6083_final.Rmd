@@ -1,0 +1,584 @@
+---
+output:
+  html_document: 
+    fig_caption: yes
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE, message=FALSE)
+```
+
+# ECON6083 Applied Machine Learning Final Project
+
+## Student Name
+
+#### Bowie Lam
+
+------------------------------------------------------------------------
+
+# 1. Motivation and research questions
+
+In previous research, it is found that curriculum materials have shown an impactful influence on students' achievements (Bhatt & Koedel, 2012; Bhatt, Koedel, & Lehmann,2013).  Specifically, scholars suggested that choosing high-quality curriculum materials is a cheaper and more efficient way to improve student achievement (Chingos & Whitehurst, 2012). However, so far, to what extent the strategy of choosing curriculum materials raises student performance is unknown. One reason is there are tons of materials that can be chosen under different assessment goals or school standards, in which student achievements may not be standardized. Noticeably, individual schools are required to report their textbook adoptions in California since 2004.  Given this backdrop, this policy allows us to eliminate the data constraint and investigate the relative achievement effects of the four most commonly adopted elementary mathematics textbooks in the fall of 2008 and fall of 2009 in California. It's believed that this research can serve as a cost-efficient strategy and provide practical insights for school administrators in choosing mathematics textbooks, therefore bringing a positive impact on improving student achievement.
+
+Our research question is to investigate the relative impacts on student achievement of four commonly used elementary mathematics textbooks in California by leveraging unique school-level data on textbook adoption. More importantly, we use both traditional OLS and Machine Learning to estimate student achievement, in which we also compare the difference between these two methods.
+
+
+# 2. Data description
+
+The authors collected the data from schools' 2013 SARCs, CDE and U.S. Census. The first dataset contains information on textbooks related to the adoption. The textbook adoption actually started in the fall of 2008, but not many schools follow this policy that year, thus the authors refer to the adoption as occurring in 2009 or 2010 considering the data issue (i.e., refer to school years by the spring year throughout our study, e.g., 2009 for 2008--2009). The second dataset was publicly available on CDE, which includes characteristics of schools and districts, as well as achievement outcomes of students from years 2003 to 2013.
+
+Data from the U.S. Census mainly included the median household income and education level in the local area for each school, linked at the zip code level. We estimated achievement outcomes by using school-average test scores on state standardized tests.
+
+The evaluation effect focuses on Grade 3 Curriculum Effects on Achievement. Besides, we also extended our study to investigate the curriculum effects on test scores in Grades 4 and 5. The above three datasets construct the variables we needed for the OLS regression, in order to answer our research questions.
+
+Unfortunately, the data set published for this paper has some missing variables and vague explanations for the variable definition. After checking the original Stata code file and comparing it with the dataset, we made a few adjustments in order to repeat the author's result in the paper as possible. We use "n1" as the pre-adoption suffix to replace the ambiguous abbreviation in the code file with no suffix declared. We delete the "\_support" variable in cluster condition and use "score_other" calculated from the remaining races undefined in the race indicator variable in replace of "score_miss" since there's no such variable.
+
+The two restricted OLS used standardized math scores and standardized language scores as dependent variables for each year separately. For schools that adopted the new math book as treatment in the 2008 fall, the author uses 2002\~2006 as the pre-adoption period, and 2008\~2012 as the post-adoption period, where year 1 is 2008-2009, Year P3 (n2) is the 2005--2006 school year, Year P4 (n3) is 2004--2005, and so on. The detailed information on the regressors is listed below:
+
+| **Dependent Variable**                                   |                                                                                 |
+|------------------------------------|------------------------------------|
+| std_score_year                                           | School average math score (standardized) in each specific year                  |
+| std_language_year                                        | School average English Language Arts score (standardized) in each specific year |
+
+| **Independent Variable**                                 |                                                                                 |
+|------------------------------------|------------------------------------|                                                                   
+| treatment                                                | Indicator of *California Math* adoption                                         |
+| adopter_08                                               | Indicator of 2008 fall adoption                                                 |
+| almostcomplete_n1                                        | Indicator of data quality                                                       |
+| census_miss                                              | Census data missing indicator                                                   |
+| low_edu                                                  | Census data, indicator of low education                                         |
+| econ_nondisad_n1                                         | Census data, indicator of economically disadvantage                             |
+| income                                                   | Census data, median household income                                            |
+| female_n1                                                | Sex indicator                                                                   |
+| black_n1, asian_n1, white_n1, race_miss_n1               | Indicator variable of race                                                      |
+| std_language_n1                                          | School average ELA score (standardized) pre-adoption                            |
+| std_district_score_n1                                    | District average math score (standardized) pre-adoption                         |
+| std_district_language_n1                                 | District average ELA score (standardized) pre-adoption                          |
+| en_learner_n1                                            | Indicator variable of English learner                                           |
+| enroll_n1, enroll_2,enroll_3                             | School enrollment pre-adoption, quadratic, cubic                                |
+| district_enroll_n1, district_enroll_2, district_enroll_3 | District enrollment pre-adoption, quadratic, cubic                              |
+
+# 3. Traditional methods-based results
+
+The first restricted OLS examined the treatment effect and other listed variables on the impact of standardized math scores. As shown, the treatment effect(adopting California Math as math textbook) is significant. Specifically, the coefficient of treatment effect is 0.116, 0.157, 0.115 and 0.148 significant at 0.05 level for the year 2008-2009, 2009-2010, 2011-2012, and 2012-2013 respectively. The adoption of this math textbook will increase their standardized math scores by 11.6% in the year 2008-2009. Interestingly, the treatment effect didn't change that much over time, they are rather very close. Apart from that, school average ELA score (standardized) pre-adoption and district average math score (standardized) pre-adoption also plays a role in the math scores both before treatment and after treatment.  Besides, economically disadvantaged and Asian students are significantly correlated with the math scores too. 
+
+The second restricted OLS examined the treatment and other variables’ effect on standardized ELA scores. Contrary to the math score, treatment as better math textbooks doesn’t have a significant effect on the English score, while the pre-adoption math score has a significant impact on language scores. The other two variables, economically disadvantaged and Asian students, also showed similar significant positive coefficients as in the math score OLS, where economically disadvantaged seems to have a higher magnitude of effects on language score than math, and the Asian coefficient is slightly smaller in language OLS than math. The R-square shows that the variables explained about 70% to 80% of the variations, thus we can conclude that the independent variables have a close relationship with the dependent variables.
+
+In conclusion, two restricted OLS models show that adopting California Math as math textbook significantly improves students’ math score while this doesn’t have a spillover effect on the impact of their English score. 
+
+
+## 3.1 [Data Section] Traditional methods: Restricted OLS estimates
+
+```{r}
+## setup
+
+## clear the environment
+rm(list=ls())
+#setwd("D:\\Master of Economics\\ECON 6083 Machine Learning\\Final Project")
+hello<- getwd()
+setwd(hello)
+
+## load the packages
+library(pacman)
+p_load("tidyverse","knitr","readr","kableExtra","haven","memisc","stargazer")
+suppressMessages({library(AER)
+  library(dplyr)
+  library(kableExtra)
+  library(hdm)
+  })
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+
+## import data
+analytic_sample <- read_dta("analytic_sample.dta")
+
+```
+
+## 3.1.1 Restricted OLS estimates with math test score
+
+Use data files "bandwidth_composite.dta" constructed in "matching.do" and "analytic_sample.dta" in "descriptive_stats.do".
+
+```{r matching_do}
+
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  
+  # name the variable with i
+  std_score_year <- paste0("std_score_",i,sep="")
+  score_miss_year <- paste0("score_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(score_miss_year),treatment) # and support?
+    
+  # run the regression
+  assign(paste0("Year_",i),
+         lm(get(std_score_year)~
+              treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+           # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0, district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta))
+  
+}
+tab_model(Year_n5,Year_n4,Year_n3,Year_n2,Year_1,Year_2,Year_3,Year_4,title="Math Score, OLS",p.style="stars",collapse.se = TRUE, show.ci = FALSE,auto.label = FALSE,dv.labels = "")
+
+
+
+
+
+```
+
+## 3.1.2 Restricted OLS estimates with ELA test score
+
+\*Use data files "bandwidth_composite.dta" constructed in "matching.do" and "analytic_sample.dta" in "descriptive_stats.do".
+
+```{r}
+
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  
+  # name the variable with i
+  std_language_year <- paste0("std_language_",i,sep="")
+  language_miss_year <- paste0("language_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(language_miss_year),treatment) # and support?
+    
+  # run the regression
+    assign(paste0("Year_",i), 
+         lm(get(std_language_year)~
+              treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+            # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0, district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta))
+  
+  # save the result
+  
+}
+tab_model(Year_n5,Year_n4,Year_n3,Year_n2,Year_1,Year_2,Year_3,Year_4,title="ELA Score, OLS",p.style="stars",collapse.se = TRUE, show.ci = FALSE,auto.label = FALSE,dv.labels = "")
+
+```
+
+However, the results maybe unreliable due to the high-dimensional nature of the equation.
+
+# 4. ML-based results
+
+As shown in the table, among estimates of all covariates, we selected std_score_n1,std_language_n1, std_district_score_n1,econ_nondisad_n1, asian_n1,  census_miss, en_learner_n1, white_n1, treatment, income ,std_district_language_n1, black_n1 as the regressors. The lasso regression results indicated that the treatment of coefficient is 0.107,0.142 and 0.126 significant at 0.05 level for the year 1, 2, and 4 respectively, implying if adopting the  California Math as a textbook in year 1(2008-2009), the standardized math scores increase 10.7% in year 1. The R-square is 0.698, 0.641,0.590 and 0.615 for the year 1, 2, 3, 4 respectively, indicating the model fits the observed data value well in general. Besides, among all the variables, it’s observed that most of the selected regressors such as std_score_n1, std_language_n1 and so on,  are significantly associated with standardized math scores, which implied ML can help us to choose relevant regressors in the preliminary stage in terms of model building. 
+
+In language lasso, the selected regressor are pre-adoption language score, pre-adoption math score, economical conditions, asian, white, english learner and income. However, the main regressor, treatment, was not selected. It fits the previous reasonable results in restricted OLS, where treatment barely has any significant effect on language score(only 5% significance in year 2 with a coefficient of 0.065) . For other regressors with significant coefficients, the coefficients in post lasso did not change much, they are basically identical to the OLS results. The R-square decreased a little bit in lasso for about 0.005, but still maintained a high magnitude as 0.803,0.742, 0.714 and 0.723 for year 1 to year 4 respectively. 
+
+
+
+## 4.1 [Data Section] ML Method for better estimations- Lasso
+
+## 4.2.1 Lasso with Math Test Score
+
+For Y= math test score
+
+Now, We apply Lasso to select relevant Controls for each year and see how is the estimates have changed.
+```{r}
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_score_year <- paste0("std_score_",i,sep="")
+  score_miss_year <- paste0("score_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(score_miss_year),treatment) # and support?
+    
+  #Run Lasso for each OLS of each specific year
+   Effecttt<-rlasso(get(std_score_year)~
+             treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+           # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0,district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta)
+   # save the result
+  assign(paste0("Year_",i),
+        Effecttt$coefficients[-1]
+         )
+  print(length(Effecttt$coefficients[-1]))
+}
+
+tabled=matrix(0,23,8)
+tabled[,1]=c(Year_n5)
+tabled[,2]=c(Year_n4)
+tabled[,3]=c(Year_n3)
+tabled[,4]=c(Year_n2)
+tabled[,5]=c(Year_1)
+tabled[,6]=c(Year_2)
+tabled[,7]=c(Year_3)
+tabled[,8]=c(Year_4)
+colnames(tabled)=c("Year_n5","Year_n4","Year_n3","Year_n2","Year_1","Year_2","Year_3","Year_4")
+rownames(tabled)=c(names(Year_n5))
+
+tabled %>%
+  kable(digits=8,caption = "Estimates of all covariates with applying Lasso for Math Test Score") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+We see which controls were selected and the post-Lasso estimates for the selected variables in a more detail way:
+
+```{r}
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_score_year <- paste0("std_score_",i,sep="")
+  score_miss_year <- paste0("score_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(score_miss_year),treatment) # and support?
+    
+  #Run Lasso for each OLS of each specific year
+   Effecttt<-rlasso(get(std_score_year)~
+             treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+           # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0,district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta)
+   # save the result
+  #Prepare for Post-Lasso OLS Result
+  gotnames<-c(names(Effecttt$index[Effecttt$index==TRUE]))
+  b <- paste(gotnames, collapse="+")
+  formula<-as.formula(paste(std_score_year," ~ ",b,sep = ""))
+  rrr<-lm(formula,data=temp_dta)
+  summary(rrr)
+  assign(paste0("Post_Lasso_Year_",i),
+        lm(formula,data=temp_dta)
+         )
+}
+
+#mtable(Post_Lasso_Year_n5,Post_Lasso_Year_n4,Post_Lasso_Year_n3,Post_Lasso_Year_n2,Post_Lasso_Year_1,Post_Lasso_Year_2,Post_Lasso_Year_3,Post_Lasso_Year_4)
+
+# library(sjPlot)
+# library(sjmisc)
+# library(sjlabelled)
+
+tab_model(Post_Lasso_Year_n5,Post_Lasso_Year_n4,Post_Lasso_Year_n3,Post_Lasso_Year_n2,Post_Lasso_Year_1,Post_Lasso_Year_2,Post_Lasso_Year_3,Post_Lasso_Year_4,title="Math Score, Post-Lasso",p.style="stars",collapse.se = TRUE, show.ci = FALSE,auto.label = FALSE,dv.labels = "")
+
+```
+
+Moreover, let see if Lasso does a better job on fitting and reducing MSE compared to OLS.
+```{r}
+library(glmnet)
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_score_year <- paste0("std_score_",i,sep="")
+  score_miss_year <- paste0("score_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(score_miss_year),treatment) # and support?
+  set.seed(1,sample.kind="Rejection")
+  train<-sample(1:nrow(temp_dta),nrow(temp_dta)/2)
+  test<-(-train)
+  
+  GXtrain<-model.matrix(get(std_score_year)~.,data=temp_dta[train,])[,c("treatment","almostcomplete_n1","census_miss","adopter_08", # almost complete_0
+             "std_score_n1","std_language_n1","std_district_score_n1",  # female_0
+             "std_district_language_n1","female_n1","econ_nondisad_n1",  # econ_nondisad_0
+             "black_n1","asian_n1","white_n1","race_miss_n1",          # black_0+asian_0+white_0
+             "en_learner_n1","enroll_n1","enroll_2","enroll_3","district_enroll_n1",  #en_learner_0,enroll_0,district_enroll_0
+             "district_enroll_2","district_enroll_3","low_edu","income")]
+  GXTest<-model.matrix(get(std_score_year)~.,data=temp_dta[test,])[,c("treatment","almostcomplete_n1","census_miss","adopter_08", # almost complete_0
+             "std_score_n1","std_language_n1","std_district_score_n1",  # female_0
+             "std_district_language_n1","female_n1","econ_nondisad_n1",  # econ_nondisad_0
+             "black_n1","asian_n1","white_n1","race_miss_n1",          # black_0+asian_0+white_0
+             "en_learner_n1","enroll_n1","enroll_2","enroll_3","district_enroll_n1",  #en_learner_0,enroll_0,district_enroll_0
+             "district_enroll_2","district_enroll_3","low_edu","income")]  
+  GYtrain<-temp_dta[train,c(paste0("std_score_",i,sep=""))]
+  GYtrain<-as.double(unlist(GYtrain))
+  y.test<-temp_dta[test,c(paste0("std_score_",i,sep=""))]
+  y.test<-as.double(unlist(y.test))
+  
+  lm.mod<-glmnet(GXtrain,GYtrain,alpha=0,lambda=0,thresh = 1e-20)
+  lm.pred<-predict(lm.mod,newx=GXTest,exact=T)
+  lm.Fit<- mean((lm.pred-y.test)^2) # the mean square of prediction's error
+  #Run Lasso for each OLS of each specific year
+  CV.lasso<-cv.glmnet(GXtrain,GYtrain, family= "gaussian",alpha=1)
+  lasso.pred<-predict(CV.lasso,s=CV.lasso$lambda.min,newx=GXTest,exact=T,x=GXtrain,y=GYtrain)
+  Lasso_CV_fit<-mean((lasso.pred-y.test)^2)
+  MSE.out.G.lasso<-mean((lasso.pred-y.test)^2)/var(y.test)
+  MSE.out.G.lm<-mean((lm.pred-y.test)^2)/var(y.test)
+  
+   # save the result
+  assign(paste0("Year_",i),
+         (lm.Fit/Lasso_CV_fit-1)*100
+         )
+  assign(paste0("LM",i),
+         MSE.out.G.lm
+         )
+    assign(paste0("MSE",i),
+         MSE.out.G.lasso
+         )
+}
+
+tabled=matrix(0,3,8)
+tabled[1,1]=c(Year_n5)
+tabled[1,2]=c(Year_n4)
+tabled[1,3]=c(Year_n3)
+tabled[1,4]=c(Year_n2)
+tabled[1,5]=c(Year_1)
+tabled[1,6]=c(Year_2)
+tabled[1,7]=c(Year_3)
+tabled[1,8]=c(Year_4)
+tabled[2,1]=c(LMn5)
+tabled[2,2]=c(LMn4)
+tabled[2,3]=c(LMn3)
+tabled[2,4]=c(LMn2)
+tabled[2,5]=c(LM1)
+tabled[2,6]=c(LM2)
+tabled[2,7]=c(LM3)
+tabled[2,8]=c(LM4)
+tabled[3,1]=c(MSEn5)
+tabled[3,2]=c(MSEn4)
+tabled[3,3]=c(MSEn3)
+tabled[3,4]=c(MSEn2)
+tabled[3,5]=c(MSE1)
+tabled[3,6]=c(MSE2)
+tabled[3,7]=c(MSE3)
+tabled[3,8]=c(MSE4)
+colnames(tabled)=c("Year_n5","Year_n4","Year_n3","Year_n2","Year_1","Year_2","Year_3","Year_4")
+rownames(tabled)=c("Percentage Improvement (%)","MSE of Linear Model","MSE of Lasso")
+
+tabled %>%
+  kable(digits=8,caption = "Out of sample comparison with Lasso and OLS:\n\nImprovement in the out-of-sample fit relatively to OLS for Math Test Score of Each Year") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+
+## 4.2.2 Lasso with ELA Test Score
+
+For Y= ELA test score
+
+Now, We apply Lasso to select relevant Controls for each year and see how is the estimates have changed.
+
+```{r}
+
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_language_year <- paste0("std_language_",i,sep="")
+  language_miss_year <- paste0("language_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(language_miss_year),treatment) # and support?
+    
+  # run the regression
+    Effect_Lang<-rlasso(get(std_language_year)~
+             treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+            # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0, district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta)
+   
+   # save the result
+  assign(paste0("Lang_Year_",i),
+        Effect_Lang$coefficients[-1]
+         )
+}
+
+table_lang=matrix(0,23,8)
+table_lang[,1]=c(Lang_Year_n5)
+table_lang[,2]=c(Lang_Year_n4)
+table_lang[,3]=c(Lang_Year_n3)
+table_lang[,4]=c(Lang_Year_n2)
+table_lang[,5]=c(Lang_Year_1)
+table_lang[,6]=c(Lang_Year_2)
+table_lang[,7]=c(Lang_Year_3)
+table_lang[,8]=c(Lang_Year_4)
+colnames(table_lang)=c("Year_n5","Year_n4","Year_n3","Year_n2","Year_1","Year_2","Year_3","Year_4")
+rownames(table_lang)=c(names(Lang_Year_n5))
+
+table_lang %>%
+  kable(digits=8,caption = "Estimates of all covariates with applying Lasso for ELA test score ") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+We see which controls were selected and the post-Lasso estimates for the selected variables in a more detail way:
+
+```{r}
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_language_year <- paste0("std_language_",i,sep="")
+  language_miss_year <- paste0("language_miss_",i,sep="")
+  
+  # choose the data that year = i ??
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(language_miss_year),treatment) # and support?
+    
+  # run the regression
+    Effect_Lang<-rlasso(get(std_language_year)~
+             treatment+almostcomplete_n1+census_miss+adopter_08+ # almost complete_0
+             std_score_n1+std_language_n1+std_district_score_n1+  # female_0
+             std_district_language_n1+female_n1+econ_nondisad_n1+  # econ_nondisad_0
+             black_n1+asian_n1+white_n1+race_miss_n1+            # black_0+asian_0+white_0
+             en_learner_n1+enroll_n1+enroll_2+enroll_3+district_enroll_n1+  #en_learner_0,enroll_0, district_enroll_0
+             district_enroll_2+district_enroll_3+low_edu+income, data=temp_dta)
+   # save the result
+  #Prepare for Post-Lasso OLS Result
+  gotnames<-c(names(Effect_Lang$index[Effect_Lang$index==TRUE]))
+  b <- paste(gotnames, collapse="+")
+  formula<-as.formula(paste(std_language_year," ~ ",b,sep = ""))
+  rr<-lm(formula,data=temp_dta)
+  summary(rr)
+  assign(paste0("Post_Lasso_Year_Lang_",i),
+        lm(formula,data=temp_dta)
+         )
+}
+
+#mtable(Post_Lasso_Year_Lang_n5,Post_Lasso_Year_Lang_n4,Post_Lasso_Year_Lang_n3,Post_Lasso_Year_Lang_n2,Post_Lasso_Year_Lang_1,Post_Lasso_Year_Lang_2,Post_Lasso_Year_Lang_3,Post_Lasso_Year_Lang_4)
+```
+
+```{r}
+tab_model(Post_Lasso_Year_Lang_n5,Post_Lasso_Year_Lang_n4,Post_Lasso_Year_Lang_n3,Post_Lasso_Year_Lang_n2,Post_Lasso_Year_Lang_1,Post_Lasso_Year_Lang_2,Post_Lasso_Year_Lang_3,Post_Lasso_Year_Lang_4,title="ELA Score, Post-Lasso",p.style="stars",collapse.se = TRUE, show.ci = FALSE,auto.label = FALSE,dv.labels = "")
+```
+
+Moreover, let see if Lasso does a better job on fitting and reducing MSE compared to OLS.
+```{r}
+library(glmnet)
+for (i in c('n5','n4','n3','n2','1','2','3','4')){
+  # name the variable with i
+  std_language_year <- paste0("std_language_",i,sep="")
+  language_miss_year <- paste0("language_miss_",i,sep="")
+  
+  # choose the data that year = i
+  temp_dta <- analytic_sample %>% 
+    # select(year == i)
+    filter(complete.cases(.)) %>%
+    mutate(districtcode = as.factor(districtcode)) %>% 
+    # distinct district code if support==1&score_miss_year==0
+    group_by(districtcode,get(language_miss_year),treatment) # and support?
+  set.seed(1,sample.kind="Rejection")
+  train<-sample(1:nrow(temp_dta),nrow(temp_dta)/2)
+  test<-(-train)
+  
+  GXtrain<-model.matrix(get(std_language_year)~.,data=temp_dta[train,])[,c("treatment","almostcomplete_n1","census_miss","adopter_08", # almost complete_0
+             "std_score_n1","std_language_n1","std_district_score_n1",  # female_0
+             "std_district_language_n1","female_n1","econ_nondisad_n1",  # econ_nondisad_0
+             "black_n1","asian_n1","white_n1","race_miss_n1",          # black_0+asian_0+white_0
+             "en_learner_n1","enroll_n1","enroll_2","enroll_3","district_enroll_n1",  #en_learner_0,enroll_0,district_enroll_0
+             "district_enroll_2","district_enroll_3","low_edu","income")]
+  GXTest<-model.matrix(get(std_language_year)~.,data=temp_dta[test,])[,c("treatment","almostcomplete_n1","census_miss","adopter_08", # almost complete_0
+             "std_score_n1","std_language_n1","std_district_score_n1",  # female_0
+             "std_district_language_n1","female_n1","econ_nondisad_n1",  # econ_nondisad_0
+             "black_n1","asian_n1","white_n1","race_miss_n1",          # black_0+asian_0+white_0
+             "en_learner_n1","enroll_n1","enroll_2","enroll_3","district_enroll_n1",  #en_learner_0,enroll_0,district_enroll_0
+             "district_enroll_2","district_enroll_3","low_edu","income")]  
+  GYtrain<-temp_dta[train,c(paste0("std_language_",i,sep=""))]
+  GYtrain<-as.double(unlist(GYtrain))
+  y.test<-temp_dta[test,c(paste0("std_language_",i,sep=""))]
+  y.test<-as.double(unlist(y.test))
+  
+  lm.mod<-glmnet(GXtrain,GYtrain,alpha=0,lambda=0,thresh = 1e-20)
+  lm.pred<-predict(lm.mod,newx=GXTest,exact=T)
+  lm.Fit<- mean((lm.pred-y.test)^2)
+  #Run Lasso for each OLS of each specific year
+  CV.lasso<-cv.glmnet(GXtrain,GYtrain, family= "gaussian",alpha=1)
+  lasso.pred<-predict(CV.lasso,s=CV.lasso$lambda.min,newx=GXTest,exact=T,x=GXtrain,y=GYtrain)
+  Lasso_CV_fit<-mean((lasso.pred-y.test)^2)
+  MSE.out.G.lasso<-mean((lasso.pred-y.test)^2)/var(y.test)
+  MSE.out.G.lm<-mean((lm.pred-y.test)^2)/var(y.test)
+  
+   # save the result
+  assign(paste0("Year_",i),
+         (lm.Fit/Lasso_CV_fit-1)*100
+         )
+  assign(paste0("LM",i),
+         MSE.out.G.lm
+         )
+    assign(paste0("MSE",i),
+         MSE.out.G.lasso
+         )
+}
+
+tabled=matrix(0,3,8)
+tabled[1,1]=c(Year_n5)
+tabled[1,2]=c(Year_n4)
+tabled[1,3]=c(Year_n3)
+tabled[1,4]=c(Year_n2)
+tabled[1,5]=c(Year_1)
+tabled[1,6]=c(Year_2)
+tabled[1,7]=c(Year_3)
+tabled[1,8]=c(Year_4)
+tabled[2,1]=c(LMn5)
+tabled[2,2]=c(LMn4)
+tabled[2,3]=c(LMn3)
+tabled[2,4]=c(LMn2)
+tabled[2,5]=c(LM1)
+tabled[2,6]=c(LM2)
+tabled[2,7]=c(LM3)
+tabled[2,8]=c(LM4)
+tabled[3,1]=c(MSEn5)
+tabled[3,2]=c(MSEn4)
+tabled[3,3]=c(MSEn3)
+tabled[3,4]=c(MSEn2)
+tabled[3,5]=c(MSE1)
+tabled[3,6]=c(MSE2)
+tabled[3,7]=c(MSE3)
+tabled[3,8]=c(MSE4)
+colnames(tabled)=c("Year_n5","Year_n4","Year_n3","Year_n2","Year_1","Year_2","Year_3","Year_4")
+rownames(tabled)=c("Percentage Improvement (%)","MSE of Linear Model","MSE of Lasso")
+
+tabled %>%
+  kable(digits=8,caption = "Out of sample comparison with Lasso and OLS:\n\nImprovement in the out-of-sample fit relatively to OLS for ELA test score of Each Year") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+# 5. Comparison between the two approaches
+
+Firstly, compared to the restricted OLS, Lasso can solve the overfitting problem to some extent. In the estimation of the impact of treatment on standardized math scores, the coefficients in Lasso is smaller than the coefficients in the OLS model from year 1 to year 4 while the R-square in Lasso is bigger than  R-square in OLS, the former range from 0.805 to 0.733 whereas the latter ranges from 0.703 to 0.628, implying the model in Lasso in fits observed data value better and more variances can be explained by the regressor in Lasso. 
+
+More importantly, we observed that the standard error of coefficients is generally smaller in Lasso than in OLS, which means the sample mean in Lasso is more accurate in reflecting the actual population mean, therefore bringing a better estimation and model. Specifically, though the percentage of prediction improvement in the table above, we can see that all the percentages are positive after deducting 1 from the fraction of the square of the prediction error of OLS over lasso. Noticeably, the coefficient indicates the percentage of prediction error that lasso is smaller than OLS. The results give quite a big magnitude that, for year 5, the lasso method improves the accuracy of prediction by 187%, and at least improves the accuracy of prediction by 43% in year 4. Although there’s no clear trend of the accuracy improvement through the year, it may be related to what the author mentioned about the non-linear up-and-down pattern of estimates across the year in the part of the extension discussion.
+
+Secondly, through the reasonable selection process, lasso thus greatly simplified the regressor set. It eases the workload of the model calculation, and thus makes the analysis faster and more concise. In the Lasso model, some irrelevant variables like sex, adoption time, and school enrollment were excluded from the calculation process, thus bringing a faster calculation and more accurate model. In the OLS model, we included all the variables as we don’t know which one may play a role in the impact of the standardized score, which actually makes the model more complicated and it takes more time to run the result.
+
+Finally, it is believed that the model in the Lasso we built is more reasonable and close to reality. In the OLS model, we tested if the treatment plays a role in standardized language scores, but all the coefficients are not significant at all. However, in the preliminary selecting variables table, Lasso excludes the variables of treatment and the result tells us the School average English Language Arts score (std_score_n) in each specific year is more relevant, and lasso regression results show that the coefficient of std_score_n are all significantly correlated with the standardized language score. Back to the real world case, if one’s previous language ability is good, then his or her language in the next year would not be too bad as they are highly associated, rather, if one’s math score is good, it is not necessary means that one’s language score will be good too. Therefore, in this case, we do think Lasso actually helps us to select more reasonable regressors in building a model. 
+
+
+# 6. Conclusion
+
+In conclusion, both OLS and Lasso can answer the research question of whether the adoption of California Math has an impact on student achievement in both math and language. The treatment of adopting California Math as math textbook significantly improves students’ math scores while this doesn’t have a spillover effect on the impact of their English scores. In comparison of Lasso and OLS, we think the results are slightly different. Specifically, Lasso gives more concise independent variables with less MSE by using the selection process. The selected variables in Lasso are more reasonable in common sense,  and greatly reduced the time of calculation.
+
+\
+\
+\
